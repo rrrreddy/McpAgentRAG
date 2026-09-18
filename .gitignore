@@ -1,0 +1,39 @@
+__pycache__/
+*.pyc
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+dist/
+build/
+
+# env
+.env
+.env.*
+!.env.example
+
+# node
+node_modules/
+frontend/dist/
+frontend/.vite/
+npm-debug.log*
+
+# data
+*.db
+*.sqlite3
+pgdata/
+chromadata/
+data/postgres/
+data/chroma/
+data/redis/
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
+
+# logs
+*.log
+logs/

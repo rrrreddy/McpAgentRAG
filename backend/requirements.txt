@@ -1,0 +1,68 @@
+# --- Web framework ---
+# Left unpinned against starlette on purpose: the `mcp` SDK below pulls in
+# whatever starlette version it currently needs, and fastapi/starlette move
+# together fast enough that a hard pin here regularly breaks the resolver.
+# `pip freeze` in your environment after install and pin exact versions
+# there if you need fully reproducible builds.
+fastapi>=0.115.6,<1.0.0
+uvicorn[standard]>=0.32.1,<1.0.0
+pydantic==2.10.3
+pydantic-settings==2.7.0
+python-multipart==0.0.20
+email-validator==2.2.0
+
+# --- Auth ---
+pyjwt==2.10.1
+passlib[bcrypt]==1.7.4
+# passlib 1.7.4's bcrypt backend probes bcrypt.__about__.__version__, which
+# bcrypt>=4.1 removed — pin below that line to avoid the (harmless but
+# noisy) "trapped error reading bcrypt version" warning on every hash.
+bcrypt==4.0.1
+
+# --- Database ---
+sqlalchemy[asyncio]==2.0.36
+asyncpg==0.30.0
+alembic==1.14.0
+pgvector==0.3.6
+
+# --- Cache / rate limiting / session state ---
+redis==5.2.1
+
+# --- Agent orchestration ---
+langgraph==0.2.62
+langchain-core==0.3.28
+langchain-text-splitters==0.3.4
+
+# --- Embeddings / RAG ---
+sentence-transformers==3.3.1
+chromadb==0.5.23
+
+# --- Model providers ---
+anthropic==0.42.0
+openai==1.58.1
+httpx==0.28.1
+
+# --- MCP ---
+# streamable-http transport requires a reasonably recent SDK; if your
+# resolved version's FastMCP API differs (method renamed, etc.) see
+# docs/setup.md#mcp-sdk-version-notes for the adjustment.
+mcp>=1.9.0,<2.0.0
+
+# --- XML / lineage parsing ---
+lxml==5.3.0
+networkx==3.4.2
+PyYAML==6.0.2
+
+# --- Charts / analytics ---
+pandas==2.2.3
+
+# --- Observability / utils ---
+structlog==24.4.0
+tenacity==9.0.0
+python-json-logger==2.0.7
+
+# --- Testing ---
+pytest==8.3.4
+pytest-asyncio==0.25.0
+httpx==0.28.1
+aiosqlite==0.20.0

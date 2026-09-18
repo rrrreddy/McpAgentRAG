@@ -1,0 +1,155 @@
+name: enterprise-rag-mcp-agents
+
+x-backend-image: &backend-image
+  build:
+    context: ./backend
+  env_file:
+    - .env
+  environment:
+    SAMPLE_DATA_DIR: /app/sample_data
+  depends_on:
+    postgres:
+      condition: service_healthy
+    redis:
+      condition: service_healthy
+  volumes:
+    - ./sample_data:/app/sample_data:ro
+  restart: unless-stopped
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_SUPERUSER_PASSWORD:?set POSTGRES_SUPERUSER_PASSWORD in .env}
+      POSTGRES_DB: ${POSTGRES_DB:-ragmcp}
+      RAGMCP_APP_USER: ${POSTGRES_USER:-ragmcp_app}
+      RAGMCP_APP_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      RAGMCP_READONLY_USER: ${POSTGRES_READONLY_USER:-ragmcp_readonly}
+      RAGMCP_READONLY_PASSWORD: ${POSTGRES_READONLY_PASSWORD:?set POSTGRES_READONLY_PASSWORD in .env}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./sample_data/db_init:/docker-entrypoint-initdb.d:ro
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d ${POSTGRES_DB:-ragmcp}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  # Optional alternate vector store backend — only used when
+  # VECTOR_STORE_BACKEND=chroma in .env. Harmless to leave running otherwise.
+  chroma:
+    image: chromadb/chroma:0.5.23
+    ports:
+      - "8001:8000"
+    volumes:
+      - chromadata:/chroma/chroma
+    restart: unless-stopped
+
+  # Fully local, no-API-key model provider — used as the automatic
+  # fallback (MODEL_GATEWAY_FALLBACK_PROVIDER=ollama) and can also be the
+  # primary provider for an entirely offline demo. Opt-in via:
+  #   docker compose --profile ollama up -d
+  ollama:
+    image: ollama/ollama:latest
+    profiles: ["ollama"]
+    volumes:
+      - ollamadata:/root/.ollama
+    ports:
+      - "11434:11434"
+    restart: unless-stopped
+
+  migrate:
+    <<: *backend-image
+    command: ["alembic", "upgrade", "head"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
+  backend:
+    <<: *backend-image
+    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health/live"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+  knowledge-mcp:
+    <<: *backend-image
+    command: ["python", "-m", "app.mcp_servers.knowledge_mcp.server"]
+    ports:
+      - "9101:9101"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+  db-mcp:
+    <<: *backend-image
+    command: ["python", "-m", "app.mcp_servers.db_mcp.server"]
+    ports:
+      - "9102:9102"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+  lineage-mcp:
+    <<: *backend-image
+    command: ["python", "-m", "app.mcp_servers.lineage_mcp.server"]
+    ports:
+      - "9103:9103"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+  governance-mcp:
+    <<: *backend-image
+    command: ["python", "-m", "app.mcp_servers.governance_mcp.server"]
+    ports:
+      - "9104:9104"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        VITE_API_BASE_URL: ${FRONTEND_API_BASE_URL:-http://localhost:8000}
+    ports:
+      - "5173:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+  redisdata:
+  chromadata:
+  ollamadata:

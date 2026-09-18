@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Illustrative PowerCenter workflow export: <WORKFLOW> binds an ordered
+     set of <SESSION> tasks (each a runtime binding of a mapping to
+     source/target connections) via <WORKFLOWLINK> dependency edges. -->
+<POWERMART>
+  <REPOSITORY NAME="BANK_DATAHUB_REPO">
+    <FOLDER NAME="DATAHUB_ETL">
+      <WORKFLOW NAME="WF_LOAD_ACCOUNTS" DESCRIPTION="Nightly incremental load of the DataHub customers and accounts marts.">
+
+        <SESSION NAME="S_M_LOAD_CUSTOMERS"
+                 MAPPINGNAME="M_LOAD_CUSTOMERS"
+                 SOURCECONNECTIONVALUE="CORE_BANKING_SRC"
+                 TARGETCONNECTIONVALUE="DATAHUB_TGT"
+                 LOADTYPE="INCREMENTAL"
+                 PARAMETERFILENAME="wf_load_accounts.prm"/>
+
+        <SESSION NAME="S_M_LOAD_ACCOUNTS"
+                 MAPPINGNAME="M_LOAD_ACCOUNTS"
+                 SOURCECONNECTIONVALUE="CORE_BANKING_SRC"
+                 TARGETCONNECTIONVALUE="DATAHUB_TGT"
+                 LOADTYPE="INCREMENTAL"
+                 PARAMETERFILENAME="wf_load_accounts.prm"/>
+
+      </WORKFLOW>
+
+      <WORKFLOWLINK FROMTASK="START"               TOTASK="S_M_LOAD_CUSTOMERS"/>
+      <WORKFLOWLINK FROMTASK="S_M_LOAD_CUSTOMERS"  TOTASK="S_M_LOAD_ACCOUNTS"/>
+
+    </FOLDER>
+  </REPOSITORY>
+</POWERMART>
