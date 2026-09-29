@@ -25,8 +25,12 @@ jobs:
           cp -r ../index.html ../manifest.webmanifest ../sw.js ../css ../js ../icons www/
       - run: npm install --no-audit --no-fund
       - name: Create iOS project
+        # Capacitor 7's `add --packagemanager SPM` creates the SPM project but then wrongly runs
+        # `pod install` (it lowercases "SPM" before comparing). Tolerate that step, check the SPM
+        # project exists, then `sync` - which detects SPM from the CapApp-SPM folder.
         run: |
-          npx cap add ios --packagemanager SPM
+          npx cap add ios --packagemanager SPM || true
+          test -f ios/App/CapApp-SPM/Package.swift
           npx cap sync ios
       - name: Build unsigned app
         run: |
