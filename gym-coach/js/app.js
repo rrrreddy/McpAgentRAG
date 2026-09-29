@@ -882,6 +882,13 @@ function showSheet(html) {
   bd.addEventListener('click', (e) => { if (e.target === bd) closeSheet(); });
   document.body.appendChild(bd);
 }
+/** In-app confirmation (native confirm() is blocked in some embedded viewers and looks out of place in a home-screen app). */
+function askConfirm(message, label, onYes, danger = true) {
+  ui.pendingConfirm = onYes;
+  showSheet(`<h2>${esc(message)}</h2>
+    <div class="grid2" style="margin-top:12px"><button class="btn" data-action="close-sheet">Cancel</button>
+    <button class="btn ${danger ? 'danger' : 'primary'}" data-action="confirm-yes">${esc(label)}</button></div>`);
+}
 function closeSheet() { document.querySelector('.sheet-backdrop')?.remove(); }
 
 // ---------- events
@@ -953,6 +960,7 @@ document.addEventListener('click', async (e) => {
       persist(); closeSheet(); render(); break;
     }
     case 'close-sheet': closeSheet(); break;
+    case 'confirm-yes': { const fn = ui.pendingConfirm; ui.pendingConfirm = null; closeSheet(); fn?.(); break; }
     case 'goto-checkin': closeSheet(); ui.tab = 'log'; ui.logView = 'checkin'; render(); window.scrollTo(0, 0); break;
     case 'open-settings': ui.prevTab = ui.tab; ui.tab = 'settings'; render(); window.scrollTo(0, 0); break;
     case 'close-settings': ui.tab = ui.prevTab || 'today'; render(); break;
@@ -970,13 +978,13 @@ document.addEventListener('click', async (e) => {
     case 'free-save': saveFree(); break;
     case 'submit-checkin': submitCheckIn(); break;
     case 'del-log':
-      if (confirm('Delete this workout log?')) {
+      askConfirm('Delete this workout log?', 'Delete log', () => {
         state.logs = state.logs.filter((l) => !(l.date === t.dataset.date && l.week === Number(t.dataset.week) && l.dayIndex === Number(t.dataset.day)));
         persist(); render();
-      }
+      });
       break;
     case 'new-cycle':
-      if (confirm('Start a new 12-week cycle from today? Your history and learned weights are kept.')) {
+      askConfirm('Start a new 12-week cycle from today? Your history and learned weights are kept.', 'Start new cycle', () => {
         if (state.adjustments.currentWeightKg) state.profile.weightKg = state.adjustments.currentWeightKg;
         state.startDate = todayIso();
         state.adjustments = { ...defaultAdjustments(), swaps: state.adjustments.swaps };
@@ -984,7 +992,7 @@ document.addEventListener('click', async (e) => {
         state.checkIns = [];
         addEvent('New 12-week cycle started.');
         persist(); render();
-      }
+      }, false);
       break;
     case 'ai-send': { const i = document.getElementById('ai-input'); const v = i.value; i.value = ''; aiSend(v); break; }
     case 'ai-quick': aiSend(t.dataset.q); break;
@@ -1025,7 +1033,7 @@ document.addEventListener('click', async (e) => {
     case 'export': exportBackup(); break;
     case 'reset-swaps': state.adjustments.swaps = {}; persist(); toast('Swaps reset'); render(); break;
     case 'reset-all':
-      if (confirm('Delete ALL data (profile, plan, logs)? This cannot be undone.')) { state = emptyState(); persist(); ui.tab = 'today'; render(); }
+      askConfirm('Delete ALL data (profile, plan, logs)? This cannot be undone.', 'Delete everything', () => { state = emptyState(); persist(); ui.tab = 'today'; render(); });
       break;
     default: break;
   }
@@ -1064,7 +1072,7 @@ document.addEventListener('change', async (e) => {
   if (t.dataset.actionChange === 'import' && t.files?.[0]) {
     try {
       const next = importJson(await t.files[0].text());
-      if (confirm('Replace all current data with this backup?')) { next.ai.apiKey = state.ai.apiKey; state = next; persist(); toast('Backup restored'); render(); }
+      askConfirm('Replace all current data with this backup?', 'Restore backup', () => { next.ai.apiKey = state.ai.apiKey; state = next; persist(); toast('Backup restored'); render(); });
     } catch (err) { toast(`Import failed: ${err.message}`); }
   }
 });
