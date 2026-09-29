@@ -1,0 +1,6 @@
+{
+  "appId": "io.github.gymcoach.ai",
+  "appName": "GymCoach AI",
+  "webDir": "www",
+  "ios": { "contentInset": "never", "limitsNavigationsToAppBoundDomains": false }
+}

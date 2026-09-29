@@ -1,0 +1,44 @@
+# Builds an UNSIGNED GymCoach .ipa on a free macOS runner. Download it from the run's
+# "Artifacts" section and install with Sideloadly or AltStore, which sign it with your
+# own free Apple ID. See gym-coach/README.md.
+name: GymCoach iOS .ipa (unsigned, for sideloading)
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main, claude/gym-trading-ai-app-pemten]
+    paths: ['gym-coach/**', '.github/workflows/gym-coach-ipa.yml']
+
+jobs:
+  ipa:
+    runs-on: macos-15
+    defaults:
+      run:
+        working-directory: gym-coach/native
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - name: Copy web app into the wrapper
+        run: |
+          mkdir -p www
+          cp -r ../index.html ../manifest.webmanifest ../sw.js ../css ../js ../icons www/
+      - run: npm install --no-audit --no-fund
+      - name: Create iOS project
+        run: |
+          npx cap add ios --packagemanager SPM
+          npx cap sync ios
+      - name: Build unsigned app
+        run: |
+          xcodebuild -project ios/App/App.xcodeproj -scheme App -configuration Release \
+            -sdk iphoneos -destination 'generic/platform=iOS' -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" build
+      - name: Package .ipa
+        run: |
+          mkdir -p Payload
+          cp -R build/Build/Products/Release-iphoneos/App.app Payload/
+          zip -qry GymCoachAI-unsigned.ipa Payload
+      - uses: actions/upload-artifact@v4
+        with:
+          name: GymCoachAI-unsigned-ipa
+          path: gym-coach/native/GymCoachAI-unsigned.ipa

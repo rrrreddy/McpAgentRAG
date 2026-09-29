@@ -1,0 +1,12 @@
+{
+  "name": "gymcoach-native",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Capacitor wrapper that packages the GymCoach web app as an iOS .ipa for sideloading.",
+  "license": "MIT",
+  "dependencies": {
+    "@capacitor/cli": "^7.4.0",
+    "@capacitor/core": "^7.4.0",
+    "@capacitor/ios": "^7.4.0"
+  }
+}

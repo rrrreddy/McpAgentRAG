@@ -38,3 +38,8 @@ data/redis/
 # logs
 *.log
 logs/
+
+# gym-coach native wrapper (generated in CI)
+gym-coach/native/www/
+gym-coach/native/ios/
+gym-coach/native/package-lock.json

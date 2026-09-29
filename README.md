@@ -18,6 +18,8 @@ charts for database-backed answers.
 > `http_get(url)` anywhere in this codebase, and a test
 > (`tests/test_mcp_tool_schemas.py`) enforces that at the source level.
 
+> **Also in this repo:** [`gym-coach/`](gym-coach/README.md) is a free, open-source AI gym coach for iPhone. It builds an adaptive 12-week plan and installs without the App Store.
+
 ## What's in here
 
 | Capability | Where |
