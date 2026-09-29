@@ -88,14 +88,34 @@ export function roundTo(x, inc) {
   return Math.max(0, Math.round(x / inc) * inc);
 }
 
-/** Starting load estimate from the baseline lifts the user entered (weight × reps they can currently do). */
+// Typical 1RM as a multiple of bodyweight by sex and training age (population strength standards).
+// Used only when the user doesn't know their lifts; discounted 20% so the first session is safely light.
+const STRENGTH_STD = {
+  beginner: { squat: 0.9, bench: 0.7, deadlift: 1.1, ohp: 0.45, row: 0.6 },
+  intermediate: { squat: 1.3, bench: 1.0, deadlift: 1.6, ohp: 0.65, row: 0.85 },
+  advanced: { squat: 1.7, bench: 1.3, deadlift: 2.0, ohp: 0.85, row: 1.1 },
+};
+const FEMALE_FACTOR = { squat: 0.72, bench: 0.6, deadlift: 0.72, ohp: 0.6, row: 0.62 };
+
+/** Estimated 1RM for a main lift: from what the user can lift now, else from bodyweight standards. */
+export function liftE1rm(profile, lift) {
+  const b = profile.lifts?.[lift];
+  if (b && b.w > 0 && b.r > 0) return { e1rm: e1rm(b.w, b.r), source: 'your current lifts' };
+  if (profile.equipment === 'bw') return null;
+  const std = STRENGTH_STD[profile.experience]?.[lift];
+  if (!std || !profile.weightKg) return null;
+  const sexF = profile.sex === 'female' ? FEMALE_FACTOR[lift] : profile.sex === 'other' ? (1 + FEMALE_FACTOR[lift]) / 2 : 1;
+  const detrained = profile.currentDays === 0 ? 0.85 : 1;
+  return { e1rm: profile.weightKg * std * sexF * detrained * 0.8, source: 'your bodyweight & level — adjust after set 1' };
+}
+
+/** Starting load for an exercise from the user's inputs. */
 function baselineLoad(ex, profile, reps, rir) {
   if (!ex.base) return null;
   const [lift, ratio] = ex.base;
-  const b = profile.lifts?.[lift];
-  if (!b || !b.w || !b.r) return null;
-  const est = e1rm(b.w, b.r) * ratio;
-  return loadFor(est, reps, rir);
+  const est = liftE1rm(profile, lift);
+  if (!est) return null;
+  return { load: loadFor(est.e1rm * ratio, reps, rir), source: est.source };
 }
 
 /**
@@ -136,9 +156,12 @@ function restFor(tier, goal) {
 export function buildDay(profile, template, dayIndex, week, adjustments = {}, exState = {}) {
   const block = blockOf(week);
   const deload = isDeload(week, adjustments);
-  const rir = rirFor(week, profile.experience, adjustments);
+  // On-ramp: people not training right now start 1 rep further from failure with 1 fewer set for 2 weeks.
+  const onRamp = !deload && week <= 2 && profile.currentDays === 0;
+  const rir = rirFor(week, profile.experience, adjustments) + (onRamp ? 1 : 0);
   const injuries = [...new Set([...(profile.injuries || []), ...(adjustments.extraInjuries || [])])];
-  const volumeDelta = deload ? 0 : (adjustments.volumeByWeek?.[week] || 0) + (adjustments.volumeBase || 0);
+  const sleepPenalty = profile.sleepHours && profile.sleepHours < 6 ? -1 : 0;
+  const volumeDelta = deload ? 0 : (adjustments.volumeByWeek?.[week] || 0) + (adjustments.volumeBase || 0) + (onRamp ? -1 : 0) + sleepPenalty;
   const swaps = adjustments.swaps || {};
   const maxEx = exerciseCountFor(profile.minutes);
   const used = new Set();
@@ -165,7 +188,7 @@ export function buildDay(profile, template, dayIndex, week, adjustments = {}, ex
         loadSource = 'your logs';
       } else {
         const b = baselineLoad(ex, profile, target, rir);
-        if (b) { load = b; loadSource = 'your baseline lifts'; }
+        if (b) { load = b.load; loadSource = b.source; }
       }
       if (load != null) {
         if (deload) load *= 0.9;
@@ -176,6 +199,7 @@ export function buildDay(profile, template, dayIndex, week, adjustments = {}, ex
       id: ex.id, slotKey, pattern, name: ex.name, cue: ex.cue, loadType: ex.load, tier,
       sets, reps, rir, rest: restFor(tier, profile.goal), load, loadSource,
       lastReps: exState[ex.id]?.lastReps || null,
+      note: fitnessNote(ex, profile),
     });
   });
 
@@ -183,6 +207,14 @@ export function buildDay(profile, template, dayIndex, week, adjustments = {}, ex
     week, dayIndex, name: template.name, focus: template.focus, deload, rir, exercises,
     finisher: finisherFor(profile.goal, block, deload),
   };
+}
+
+/** Personalised scaling tips from the user's fitness tests. */
+function fitnessNote(ex, p) {
+  if (ex.pattern === 'hpush' && ex.load === 'bw' && p.pushups != null && p.pushups < 8) return `You did ${p.pushups} push-ups in your test — do these with hands on a bench or wall until you can get 12, then go to the floor.`;
+  if (ex.id === 'pullup' && p.pullups != null && p.pullups < 5) return `You can do ${p.pullups} pull-up${p.pullups === 1 ? '' : 's'} — use a band, or do slow 3–5 s lowering reps from the top.`;
+  if (ex.pattern === 'core' && ex.id === 'plank' && p.plankSec != null && p.plankSec < 30) return `Start with ${Math.max(10, p.plankSec)} s holds and add 5 s each week.`;
+  return null;
 }
 
 function finisherFor(goal, block, deload) {
@@ -196,6 +228,10 @@ export function cardioPlan(profile, week) {
   const block = blockOf(week);
   const deload = week % 4 === 0;
   const g = profile.goal;
+  // Build up gradually from what the user does now.
+  if (block === 0 && !deload && profile.cardioMin != null && profile.cardioMin < 45 && (g === 'fat_loss' || g === 'endurance')) {
+    return { steps: g === 'fat_loss' ? 7000 : 6000, sessions: `2 × 20 min zone-2 (easy talk-pace) — building up from your current ${profile.cardioMin} min/week` };
+  }
   const steps = g === 'fat_loss' ? [8000, 9000, 10000][block] : g === 'recomp' ? 8000 : 7000;
   let sessions;
   if (g === 'fat_loss') sessions = [`3 × 25 min zone-2 (easy talk-pace)`, `3 × 30 min zone-2`, `2 × 30 min zone-2 + 1 × 15 min intervals`][block];
@@ -223,8 +259,18 @@ export function nutritionFor(profile, adjustments = {}, currentWeightKg) {
     endurance: 1.0,
     general: 1.0,
   }[profile.goal];
+  let target = tdee * goalFactor;
+  // Size the deficit/surplus to the user's target weight, within safe limits.
+  const tw = profile.targetWeightKg;
+  if (tw && (profile.goal === 'fat_loss' || profile.goal === 'recomp') && tw < w) {
+    const perDay = (((w - tw) / WEEKS) * 7700) / 7;
+    target = tdee - Math.min(tdee * 0.25, Math.max(tdee * (profile.goal === 'recomp' ? 0.05 : 0.1), perDay));
+  } else if (tw && profile.goal === 'muscle' && tw > w) {
+    const perDay = (((tw - w) / WEEKS) * 7700) / 7;
+    target = tdee + Math.min(tdee * 0.15, Math.max(tdee * 0.05, perDay));
+  }
   const floor = profile.sex === 'male' ? 1500 : 1200;
-  const calories = Math.round(Math.max(floor, tdee * goalFactor + (adjustments.calorieDelta || 0)) / 10) * 10;
+  const calories = Math.round(Math.max(floor, target + (adjustments.calorieDelta || 0)) / 10) * 10;
 
   const bmi = w / (h / 100) ** 2;
   const proteinBasis = bmi > 30 ? 27 * (h / 100) ** 2 : w; // don't over-prescribe protein at high body fat
@@ -240,7 +286,7 @@ export function nutritionFor(profile, adjustments = {}, currentWeightKg) {
 }
 
 /** Rough 12-week expectation so the user knows what "on track" looks like. */
-export function projection(profile) {
+export function projection(profile, fmtW = (kg) => `${Math.round(kg * 10) / 10} kg`) {
   const w = profile.weightKg;
   const rate = {
     fat_loss: [-0.005, -0.0075], muscle: profile.experience === 'beginner' ? [0.0025, 0.005] : [0.001, 0.0025],
@@ -249,15 +295,44 @@ export function projection(profile) {
   const lo = w * (1 + rate[0]) ** WEEKS;
   const hi = w * (1 + rate[1]) ** WEEKS;
   const strengthGain = { beginner: [15, 30], intermediate: [5, 12], advanced: [2, 6] }[profile.experience];
+  let targetNote = null;
+  const tw = profile.targetWeightKg;
+  if (tw && Math.abs(tw - w) >= 0.5) {
+    const safePerWeek = tw < w ? w * 0.0075 : w * (profile.experience === 'beginner' ? 0.005 : 0.0025);
+    const weeksNeeded = Math.ceil(Math.abs(tw - w) / safePerWeek);
+    targetNote = weeksNeeded <= WEEKS
+      ? `Your target of ${fmtW(tw)} is realistic within 12 weeks (about ${weeksNeeded} weeks at a safe pace).`
+      : `Your target of ${fmtW(tw)} needs about ${weeksNeeded} weeks at a safe pace — this 12-week plan gets you roughly ${fmtW((Math.abs(tw - w) * WEEKS) / weeksNeeded)} of the way; run a second cycle for the rest.`;
+  }
   return {
+    targetNote,
     weightRange: [Math.round(Math.min(lo, hi) * 10) / 10, Math.round(Math.max(lo, hi) * 10) / 10],
     weeklyRatePct: rate.map((r) => Math.round(r * 1000) / 10),
     strengthGainPct: strengthGain,
   };
 }
 
+/** How each of the user's inputs shaped the plan — shown on the Plan tab. */
+export function inputsExplained(p, split, nutrition, fmtW = (kg) => `${Math.round(kg * 10) / 10} kg`) {
+  const out = [];
+  const eq = { gym: 'full gym', db: 'dumbbells', bw: 'bodyweight' }[p.equipment];
+  out.push(['Goal', `${GOALS[p.goal]} → rep ranges, rest times, calories (${nutrition.calories} kcal vs ${nutrition.tdee} maintenance) and cardio are set for this goal.`]);
+  out.push(['Schedule', `${p.days} days × ${p.minutes} min → ${split.name}, ${exerciseCountFor(p.minutes)} exercises per session.`]);
+  out.push(['Experience', `${p.experience} → ${p.experience === 'beginner' ? '3 sets on main lifts, never closer than 2 reps to failure' : p.experience === 'advanced' ? 'up to 5 sets on main lifts, effort ramps to 1 rep from failure' : '4 sets on main lifts, effort ramps to 1 rep from failure'}.`]);
+  out.push(['Equipment', `${eq} → only exercises you can do with it.`]);
+  const known = Object.keys(p.lifts || {});
+  out.push(['Current weights', known.length ? `You entered ${known.join(', ')} → starting weights calculated from them.` : p.equipment === 'bw' ? 'Bodyweight plan — progress by reps and harder variations.' : `Not entered → starting weights estimated from your bodyweight (${fmtW(p.weightKg)}), sex and level, set 20% light. The app corrects them after your first logged sets.`]);
+  out.push(['Current routine', p.currentDays === 0 ? 'Not training now → 2-week on-ramp with lighter effort and fewer sets.' : `Training ${p.currentDays}×/week now${p.days > p.currentDays + 1 ? ' → volume starts conservative because you are adding days' : ' → no on-ramp needed'}.`]);
+  if (p.pushups != null || p.pullups != null || p.plankSec != null) out.push(['Fitness test', `${p.pushups != null ? `${p.pushups} push-ups` : ''}${p.pullups != null ? `, ${p.pullups} pull-ups` : ''}${p.plankSec != null ? `, ${p.plankSec}s plank` : ''} → bodyweight exercises scaled to your level.`.replace(/^, /, '')]);
+  if (p.sleepHours) out.push(['Sleep', p.sleepHours < 6 ? `Under 6 h → one fewer accessory set to match your recovery. More sleep = faster results.` : `${p.sleepHours >= 8 ? '8+' : p.sleepHours} h → full training volume.`]);
+  if (p.cardioMin != null) out.push(['Cardio now', `${p.cardioMin} min/week → cardio ${p.cardioMin < 45 ? 'builds up gradually' : 'starts at the full target'}.`]);
+  if (p.injuries?.length) out.push(['Injuries', `${p.injuries.join(', ').replaceAll('_', ' ')} → exercises that commonly aggravate them are excluded.`]);
+  if (p.targetWeightKg) out.push(['Target weight', `${fmtW(p.targetWeightKg)} → calorie ${p.targetWeightKg < p.weightKg ? 'deficit' : 'surplus'} sized to reach it at a safe rate.`]);
+  return out;
+}
+
 /** Full 12-week plan. */
-export function generatePlan(profile, adjustments = {}, exState = {}) {
+export function generatePlan(profile, adjustments = {}, exState = {}, fmtW = undefined) {
   const split = splitFor(profile.days, profile.experience);
   const weeks = [];
   for (let wk = 1; wk <= WEEKS; wk++) {
@@ -272,13 +347,15 @@ export function generatePlan(profile, adjustments = {}, exState = {}) {
       cardio: cardioPlan(profile, wk),
     });
   }
+  const nutrition = nutritionFor(profile, adjustments, adjustments.currentWeightKg);
   return {
     split: split.name,
     blocks: BLOCKS,
     weeks,
-    nutrition: nutritionFor(profile, adjustments, adjustments.currentWeightKg),
-    projection: projection(profile),
+    nutrition,
+    projection: projection(profile, fmtW),
     rationale: rationaleFor(profile, split),
+    inputs: inputsExplained(profile, split, nutrition, fmtW),
   };
 }
 

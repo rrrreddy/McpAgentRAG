@@ -1,9 +1,9 @@
 // Offline support: cache the app shell so the app opens without a connection.
 // (WebLLM caches the AI model files itself in the browser Cache Storage.)
-const VERSION = 'gymcoach-v1';
+const VERSION = 'gymcoach-v2';
 const SHELL = [
   './', './index.html', './manifest.webmanifest', './css/app.css',
-  './js/app.js', './js/planner.js', './js/progress.js', './js/exercises.js', './js/ai.js', './js/store.js',
+  './js/app.js', './js/planner.js', './js/progress.js', './js/exercises.js', './js/ai.js', './js/store.js', './js/animations.js',
   './icons/apple-touch-icon.png', './icons/icon-192.png', './icons/icon-512.png',
 ];
 

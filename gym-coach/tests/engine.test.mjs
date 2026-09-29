@@ -121,3 +121,43 @@ test('weigh-ins less than 5 days apart do not change calories', () => {
   assert.equal(r.adjustments.calorieDelta, 0);
   assert.equal(r.adjustments.currentWeightKg, 83);
 });
+
+test('gym log records, PR detection and streaks', async () => {
+  const { records, detectPRs, streakWeeks } = await import('../js/progress.js');
+  const logs = [
+    { date: '2026-01-05', week: 1, entries: [{ id: 'bench', sets: [{ w: 60, r: 8 }, { w: 60, r: 7 }] }, { id: 'pushup', sets: [{ w: 0, r: 12 }] }] },
+    { date: '2026-01-12', week: 2, entries: [{ id: 'bench', sets: [{ w: 62.5, r: 8 }] }] },
+  ];
+  const rec = records(logs);
+  assert.equal(rec.bench.heaviest.w, 62.5);
+  assert.equal(rec.bench.sessions, 2);
+  assert.equal(rec.pushup.mostReps.r, 12);
+  assert.deepEqual(detectPRs(logs, [{ id: 'bench', sets: [{ w: 65, r: 8 }] }]).map((p) => p.kind), ['strength']);
+  assert.equal(detectPRs(logs, [{ id: 'bench', sets: [{ w: 50, r: 5 }] }]).length, 0);
+  assert.equal(detectPRs(logs, [{ id: 'pushup', sets: [{ w: 0, r: 15 }] }])[0].kind, 'reps');
+  assert.equal(detectPRs(logs, [{ id: 'rdl', sets: [{ w: 80, r: 8 }] }]).length, 0, 'first time is not a PR');
+  assert.equal(streakWeeks(logs, '2026-01-14'), 2);
+  assert.equal(streakWeeks(logs, '2026-02-20'), 0);
+});
+
+test('plan uses inputs: bodyweight-based loads, on-ramp, fitness notes, target-weight calories', () => {
+  const noLifts = { ...base, lifts: {} };
+  const pl = generatePlan(noLifts);
+  const bench = pl.weeks[0].days[0].exercises[0];
+  assert.ok(bench.load > 20 && bench.load < 80, `estimated bench ${bench.load}`);
+  assert.match(bench.loadSource, /bodyweight/);
+
+  const fresh = generatePlan({ ...base, currentDays: 0 });
+  const trained = generatePlan({ ...base, currentDays: 4 });
+  assert.equal(fresh.weeks[0].days[0].exercises[0].rir, trained.weeks[0].days[0].exercises[0].rir + 1);
+
+  const bw = generatePlan({ ...base, equipment: 'bw', pushups: 3 });
+  const push = bw.weeks[0].days.flatMap((d) => d.exercises).find((e) => e.id === 'pushup');
+  assert.match(push.note, /bench or wall/);
+
+  const aggressive = nutritionFor({ ...base, goal: 'fat_loss', targetWeightKg: 60 });
+  assert.ok(aggressive.calories >= Math.round(aggressive.tdee * 0.75) - 10, 'deficit capped at 25%');
+  const gentle = nutritionFor({ ...base, goal: 'fat_loss', targetWeightKg: 84 });
+  assert.ok(gentle.calories > aggressive.calories);
+  assert.ok(pl.inputs.length >= 5);
+});

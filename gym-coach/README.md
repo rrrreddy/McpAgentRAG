@@ -41,7 +41,10 @@ Wi-Fi. This is an Apple restriction, which is why Option A is recommended.
 
 | | |
 |---|---|
-| **Onboarding** | Age, sex, height, weight, goal (lose fat / build muscle / recomp / strength / endurance / general), experience, days per week (2–6), minutes per session, equipment (gym / dumbbells / bodyweight), injuries, **your current routine** and current working weights |
+| **Onboarding** | Age, sex, height, weight, **target weight**, goal (lose fat / build muscle / recomp / strength / endurance / general), experience, days per week (2–6), minutes per session, equipment (gym / dumbbells / bodyweight), injuries, **your current routine**, current working weights, a **quick fitness test** (push-ups, pull-ups, plank), sleep and current cardio |
+| **Built from your inputs** | The Plan tab shows how each input shaped the plan. Starting weights come from your lifts, or are estimated from your bodyweight, sex and level. People not training now get a 2-week on-ramp. Push-up and pull-up scores scale the bodyweight moves. Short sleep trims volume. Calories are sized to reach your target weight at a safe rate, and the app tells you whether the target is realistic in 12 weeks |
+| **Guide** | An animated demo for every movement (works offline), step-by-step form, common mistakes, breathing, and a "Watch video demos" button that opens YouTube for that exact exercise. Also covers warm-up, RIR, progressive overload, deloads, nutrition, recovery and safety |
+| **Gym log** | History, personal records with automatic 🏆 PR detection, a per-exercise history sheet, weekly volume and streak, logging of extra exercises outside the plan, the weekly check-in, and bodyweight and strength charts |
 | **12-week plan** | 3 blocks (Foundation → Build → Peak), deload every 4th week, effort ramps 3 → 2 → 1 reps in reserve, split chosen by days (Full Body / Upper-Lower / PPL), exercises chosen by equipment, injuries and experience, session length fits your time |
 | **Nutrition** | Mifflin-St Jeor calories, goal-based deficit or surplus, protein/carbs/fat, water, fibre, steps and cardio per week |
 | **Workout logger** | Suggested weight for every set, rest timer, swap any exercise, notes and session RPE |
@@ -71,7 +74,8 @@ node --test gym-coach/tests/*.test.mjs        # from the repo root: plan & adapt
 
 | File | Purpose |
 |---|---|
-| `js/exercises.js` | Exercise library: pattern, equipment level, injury flags, cues |
+| `js/exercises.js` | Exercise library: pattern, equipment level, injury flags, cues, form guide, training topics |
+| `js/animations.js` | Stick-figure exercise animations (pose keyframes + 2-bone IK), offline |
 | `js/planner.js` | 12-week periodization, splits, sets/reps/RIR, loads, nutrition, projections |
 | `js/progress.js` | Logs → strength estimates; check-ins → calorie/volume/deload/exercise adjustments |
 | `js/ai.js` | WebLLM on-device + OpenAI-compatible remote chat, context builder |

@@ -136,6 +136,8 @@ body.timing main { padding-bottom: calc(var(--tabbar-h) + env(safe-area-inset-bo
 .btn.block { width: 100%; }
 .btn.sm { min-height: 34px; padding: 6px 10px; font-size: 14px; border-radius: 10px; }
 .btn:disabled { opacity: 0.5; }
+a.btn { text-decoration: none; color: var(--ink); }
+a.btn.primary { color: var(--accent-ink); }
 .linkbtn { background: none; border: 0; color: var(--accent); font-weight: 600; padding: 4px; }
 
 label.field { display: block; font-size: 13px; color: var(--ink-2); font-weight: 600; }
@@ -256,3 +258,29 @@ details.week[open] > summary::after { transform: rotate(90deg); }
   .kpis { grid-template-columns: repeat(2, 1fr); }
   .grid3 { grid-template-columns: 1fr 1fr; }
 }
+
+/* ---- exercise demo animations */
+svg.demo { display: block; width: 100%; max-width: 240px; height: auto; margin: 0 auto; background: var(--surface-2); border-radius: 14px; }
+svg.demo .limb { stroke: var(--ink); stroke-width: 4.2; stroke-linecap: round; }
+svg.demo .limb.torso { stroke-width: 5.5; }
+svg.demo .limb.far { stroke: var(--ink-3); opacity: 0.6; }
+svg.demo .limb.foot { stroke-width: 3.4; }
+svg.demo .head { fill: var(--ink); }
+svg.demo .ground { stroke: var(--line); stroke-width: 2; }
+svg.demo .prop { fill: var(--ink-3); opacity: 0.55; }
+svg.demo .prop-l { stroke: var(--ink-3); stroke-width: 2.5; opacity: 0.55; stroke-linecap: round; }
+svg.demo .plate { fill: var(--accent); opacity: 0.9; }
+svg.demo .hub { fill: var(--surface); }
+svg.demo .cable { stroke: var(--ink-3); stroke-width: 1.2; stroke-dasharray: 2 2; }
+
+.thumb { flex: none; width: 64px; padding: 0; border: 0; background: none; display: block; }
+.thumb svg.demo { max-width: 64px; border-radius: 10px; }
+.demo-big svg.demo { max-width: 260px; }
+.rowbtn { display: flex; width: 100%; gap: 12px; align-items: center; text-align: left; background: none; border: 0; padding: 0; }
+.note { margin-top: 8px; padding: 8px 10px; border-radius: 10px; background: var(--warn-soft); color: var(--ink); }
+.iconbtn { background: none; border: 0; color: var(--ink-2); width: 44px; height: 44px; display: grid; place-items: center; border-radius: 12px; }
+.guide-sec { margin-top: 14px; }
+.guide-sec h3 { margin-bottom: 4px; }
+.guide-sec p, .guide-sec ol, .guide-sec ul { margin: 0; font-size: 15px; }
+.guide-sec ol, .guide-sec ul { padding-left: 20px; }
+.guide-sec li { margin-bottom: 4px; }

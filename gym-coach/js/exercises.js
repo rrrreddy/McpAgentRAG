@@ -135,3 +135,164 @@ export function optionsFor(pattern, equipment, injuries = []) {
 export function swapOptions(pattern, equipment) {
   return optionsFor(pattern, equipment, []);
 }
+
+// ---- Coaching guide per movement pattern: what it trains, how to do it, what to avoid.
+export const PATTERN_GUIDE = {
+  squat: {
+    muscles: 'Quads, glutes, adductors, core',
+    steps: ['Feet shoulder-width, toes slightly out.', 'Big breath into your belly and brace like someone is about to poke your stomach.', 'Sit down and back between your hips, knees travel over your toes.', 'Go as deep as you can with a neutral back, then drive up through the whole foot.'],
+    mistakes: ['Knees caving inward', 'Heels lifting off the floor', 'Chest collapsing forward on the way up', 'Bouncing out of the bottom'],
+    breathing: 'Inhale and brace at the top, hold down and up, exhale at the top.',
+  },
+  hinge: {
+    muscles: 'Hamstrings, glutes, lower & upper back, grip',
+    steps: ['Stand with the weight over mid-foot, feet hip-width.', 'Push your hips back like closing a car door with your bum, knees soft.', 'Keep the weight close to your legs and your back flat — chest proud.', 'Stand up by squeezing your glutes and pushing the floor away.'],
+    mistakes: ['Rounding the lower back', 'Letting the weight drift away from the legs', 'Squatting the weight instead of hinging', 'Leaning back at the top'],
+    breathing: 'Brace before each rep, exhale at the top.',
+  },
+  lunge: {
+    muscles: 'Quads, glutes, adductors, balance',
+    steps: ['Take a long split stance, hips square to the front.', 'Lower straight down until the back knee is just above the floor.', 'Keep most of your weight on the front foot.', 'Drive through the front heel to stand back up.'],
+    mistakes: ['Front knee caving in', 'Stance too short (knee way past toes, heel lifts)', 'Pushing off the back foot', 'Torso twisting'],
+    breathing: 'Inhale down, exhale up.',
+  },
+  quad: {
+    muscles: 'Quadriceps',
+    steps: ['Set the pad just above the ankles and align your knee with the machine pivot.', 'Hold the handles, back against the seat.', 'Straighten your legs and squeeze for 1 second.', 'Lower slowly over 2–3 seconds.'],
+    mistakes: ['Swinging the weight', 'Lifting hips off the seat', 'Cutting the range short'],
+    breathing: 'Exhale as you extend, inhale as you lower.',
+  },
+  ham: {
+    muscles: 'Hamstrings',
+    steps: ['Line up your knees with the pivot, pad just above the heels.', 'Keep your hips pinned to the seat/bench.', 'Curl your heels toward your glutes and squeeze.', 'Return slowly until your legs are almost straight.'],
+    mistakes: ['Hips lifting', 'Fast, jerky reps', 'Partial range'],
+    breathing: 'Exhale as you curl, inhale on the way back.',
+  },
+  hpush: {
+    muscles: 'Chest, front delts, triceps',
+    steps: ['Lie with eyes under the bar, feet flat, slight arch.', 'Squeeze shoulder blades together and down.', 'Lower the weight to the lower chest with elbows about 45° from your body.', 'Press up and slightly back toward your face.'],
+    mistakes: ['Elbows flared out to 90°', 'Bouncing off the chest', 'Hips lifting off the bench', 'Shoulders rolling forward at the top'],
+    breathing: 'Inhale on the way down, exhale as you press.',
+  },
+  vpush: {
+    muscles: 'Shoulders, triceps, upper chest, core',
+    steps: ['Hands just outside shoulders, forearms vertical.', 'Squeeze glutes and brace so your lower back doesn’t arch.', 'Press straight up, moving your head back then through once the weight passes it.', 'Finish with arms locked and biceps by your ears.'],
+    mistakes: ['Leaning back excessively', 'Pressing forward instead of up', 'Flaring the ribs'],
+    breathing: 'Brace at the bottom, exhale at lockout.',
+  },
+  hpull: {
+    muscles: 'Lats, mid-back, rear delts, biceps',
+    steps: ['Hinge or lie chest-down so your torso is supported or stable.', 'Start with arms long and shoulder blades stretched forward.', 'Pull your elbows back toward your hips.', 'Pause and squeeze your shoulder blades, then lower under control.'],
+    mistakes: ['Jerking with the lower back', 'Shrugging the shoulders to the ears', 'Only moving the arms, not the shoulder blades'],
+    breathing: 'Exhale as you pull, inhale as you lower.',
+  },
+  vpull: {
+    muscles: 'Lats, biceps, rear delts, grip',
+    steps: ['Grip slightly wider than shoulders.', 'Start from a dead hang / full stretch.', 'Pull your elbows down to your ribs, chest up toward the bar.', 'Lower all the way until your arms are straight.'],
+    mistakes: ['Half reps', 'Swinging or kipping', 'Pulling with the neck (chin poking)'],
+    breathing: 'Exhale as you pull, inhale as you lower.',
+  },
+  chest_iso: {
+    muscles: 'Chest',
+    steps: ['Keep a slight, fixed bend in your elbows.', 'Open your arms in a wide arc until you feel a chest stretch.', 'Bring the hands together as if hugging a big tree.', 'Squeeze the chest for a second.'],
+    mistakes: ['Turning it into a press (bending elbows more)', 'Going too heavy and overstretching the shoulders'],
+    breathing: 'Inhale as you open, exhale as you squeeze.',
+  },
+  delt_side: {
+    muscles: 'Side delts (shoulder width)',
+    steps: ['Stand tall, slight forward lean, dumbbells at your sides.', 'Raise your arms out to the side, leading with the elbows.', 'Stop at shoulder height, pinkies roughly level with thumbs.', 'Lower slowly over 2–3 seconds.'],
+    mistakes: ['Swinging with the body', 'Shrugging with the traps', 'Going too heavy'],
+    breathing: 'Exhale as you raise, inhale as you lower.',
+  },
+  delt_rear: {
+    muscles: 'Rear delts, upper back',
+    steps: ['Hinge forward with a flat back (or lie chest-down on an incline bench).', 'Arms hang with a soft bend in the elbows.', 'Sweep your arms out wide, like spreading wings.', 'Pause, then lower under control.'],
+    mistakes: ['Using momentum', 'Squeezing shoulder blades instead of moving the arms', 'Too heavy'],
+    breathing: 'Exhale as you raise.',
+  },
+  biceps: {
+    muscles: 'Biceps, forearms',
+    steps: ['Stand tall, elbows by your sides.', 'Curl the weight up without moving your elbows forward.', 'Squeeze at the top.', 'Lower all the way down slowly.'],
+    mistakes: ['Swinging the body', 'Elbows drifting forward', 'Cutting the bottom of the rep'],
+    breathing: 'Exhale as you curl, inhale as you lower.',
+  },
+  triceps: {
+    muscles: 'Triceps',
+    steps: ['Pin your elbows in place (by your sides or overhead).', 'Straighten your arms fully and squeeze the back of your arm.', 'Return slowly until you feel a stretch.'],
+    mistakes: ['Elbows moving around', 'Leaning into it with bodyweight', 'Half reps'],
+    breathing: 'Exhale as you extend.',
+  },
+  calves: {
+    muscles: 'Calves',
+    steps: ['Stand on the edge of a step with the balls of your feet.', 'Lower your heels for a deep stretch and pause 2 seconds.', 'Rise as high as you can onto your toes.', 'Pause at the top, then lower slowly.'],
+    mistakes: ['Bouncing', 'Tiny range of motion', 'Bending the knees to cheat'],
+    breathing: 'Breathe steadily; exhale as you rise.',
+  },
+  glute: {
+    muscles: 'Glutes, hamstrings',
+    steps: ['Upper back on a bench (or floor for bridges), feet flat, shins vertical at the top.', 'Tuck your chin and ribs down.', 'Drive through your heels to lift the hips until your body is a straight line.', 'Squeeze your glutes hard for 1 second at the top.'],
+    mistakes: ['Arching the lower back instead of using the glutes', 'Feet too close or too far', 'Pushing through the toes'],
+    breathing: 'Exhale as you drive up.',
+  },
+  core: {
+    muscles: 'Abs, obliques, deep core',
+    steps: ['Press your lower back gently into the floor (or keep ribs down in a plank).', 'Move slowly — control is the point.', 'Keep breathing; don’t hold your breath for the whole set.', 'Stop the set when you can’t keep your position.'],
+    mistakes: ['Lower back arching off the floor', 'Rushing reps', 'Holding breath'],
+    breathing: 'Slow exhales while you brace.',
+  },
+};
+
+/** Open a YouTube search for a form video of this exercise (works offline-safe: just a link). */
+export function videoUrl(ex) {
+  return `https://www.youtube.com/results?search_query=${encodeURIComponent(`${ex.name} proper form tutorial`)}`;
+}
+
+// ---- General training guide (Guide tab)
+export const GUIDE_TOPICS = [
+  { id: 'start', title: 'How this app works', body: [
+    'You get a 12-week plan built from your goal, schedule, equipment, current strength and fitness level.',
+    'Each session, the Today tab shows exactly what to do: exercises, sets, reps and the weight to use.',
+    'Log what you actually lifted. The app learns your real strength and sets next session\'s weights automatically.',
+    'Once a week, do the 1-minute check-in (weight, sleep, energy, soreness). Calories, volume and exercises adapt to how you respond.',
+  ] },
+  { id: 'rir', title: 'Reps in reserve (RIR) — how hard to push', body: [
+    'RIR = how many more reps you could have done with good form. "2 RIR" means stop when 2 clean reps are left in the tank.',
+    'The plan ramps effort across each block: 3 → 2 → 1 RIR, then a deload week.',
+    'If you finish a set and could have done 5 more, the weight is too light — the app will increase it once you log it.',
+  ] },
+  { id: 'warmup', title: 'Warm-up (5–8 minutes)', body: [
+    '3–5 minutes of easy cardio (bike, brisk walk, rower) to raise body temperature.',
+    'Dynamic moves: 10 leg swings each side, 10 arm circles, 10 bodyweight squats, 10 hip hinges.',
+    'Before your first exercise: 1 set of 10 with ~50% of your working weight, 1 set of 5 with ~75%.',
+  ] },
+  { id: 'overload', title: 'Progressive overload — how you get results', body: [
+    'Muscles grow and get stronger when you gradually do more: more reps at the same weight, then more weight.',
+    'Double progression: work in a rep range (e.g. 8–10). When you hit 10 on all sets, the weight goes up and you start at 8 again.',
+    'The app does this for you from your logs — just log honestly.',
+  ] },
+  { id: 'deload', title: 'Deload weeks', body: [
+    'Every 4th week, sets are halved and loads drop ~10%. This lets joints and nervous system recover so you keep progressing.',
+    'If check-ins show poor recovery two weeks running, the app inserts an extra deload.',
+  ] },
+  { id: 'nutrition', title: 'Nutrition basics', body: [
+    'Hit your protein target every day — spread over 3–5 meals (about 25–40 g each).',
+    'Calories drive weight change; the app adjusts them from your weekly weigh-ins.',
+    'Base meals on lean protein, vegetables, fruit, whole grains, potatoes/rice, and healthy fats.',
+    'Drink water through the day; more on training days and in heat.',
+  ] },
+  { id: 'recovery', title: 'Sleep & recovery', body: [
+    '7–9 hours of sleep is the single biggest recovery tool. Under 6 hours slows muscle gain and fat loss.',
+    'Sore for 1–2 days is normal. Sharp or joint pain is not — report it in the check-in and swap the exercise.',
+    'Daily steps and light cardio speed up recovery.',
+  ] },
+  { id: 'log', title: 'Using the gym log', body: [
+    'Enter the weight and reps you actually did for each set, then tap ✓ to start the rest timer.',
+    'Did an exercise that\'s not in your plan? Use Log → "Log extra exercise".',
+    'Personal records (PRs) are detected automatically and shown in Log → Records.',
+  ] },
+  { id: 'safety', title: 'Safety', body: [
+    'Learn the movement with light weight before going heavy.',
+    'Use safety pins/spotter arms for heavy bench and squats.',
+    'Stop immediately with chest pain, dizziness, or sharp joint pain. See a doctor before starting if you have a heart condition, high blood pressure, are pregnant, or have a recent injury.',
+  ] },
+];

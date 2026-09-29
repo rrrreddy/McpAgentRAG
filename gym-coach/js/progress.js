@@ -75,7 +75,7 @@ export function applyWorkout(state, day, entries) {
 }
 
 export function sessionsInWeek(logs, week) {
-  return logs.filter((l) => l.week === week).length;
+  return logs.filter((l) => l.week === week && l.dayIndex >= 0).length; // extra/free logs don't count as planned sessions
 }
 
 export function adherence(state, week) {
@@ -179,3 +179,70 @@ export function applyCheckIn(state, ci) {
 
 function clamp(x, lo, hi) { return Math.min(hi, Math.max(lo, x)); }
 function fmtPct(p) { return `${p > 0 ? '+' : ''}${p.toFixed(2)}%`; }
+
+// ---- Gym log records
+
+/** Personal records per exercise from all logs. Loads in kg. */
+export function records(logs) {
+  const out = {};
+  for (const l of logs) {
+    for (const e of l.entries) {
+      const r = (out[e.id] ||= { sessions: 0, lastDate: null, best: null, heaviest: null, mostReps: null, volume: 0 });
+      r.sessions++;
+      r.lastDate = !r.lastDate || l.date > r.lastDate ? l.date : r.lastDate;
+      for (const s of e.sets) {
+        const w = Number(s.w) || 0;
+        const reps = Number(s.r) || 0;
+        if (!reps) continue;
+        r.volume += w * reps;
+        if (w > 0) {
+          const est = e1rm(w, reps);
+          if (!r.best || est > r.best.e1rm) r.best = { e1rm: est, w, r: reps, date: l.date };
+          if (!r.heaviest || w > r.heaviest.w || (w === r.heaviest.w && reps > r.heaviest.r)) r.heaviest = { w, r: reps, date: l.date };
+        }
+        if (!r.mostReps || reps > r.mostReps.r) r.mostReps = { w, r: reps, date: l.date };
+      }
+    }
+  }
+  return out;
+}
+
+/** PRs set by `entries` compared with earlier `logs`. Returns [{id, kind, w, r}]. */
+export function detectPRs(logs, entries) {
+  const before = records(logs);
+  const prs = [];
+  for (const e of entries) {
+    const prev = before[e.id];
+    if (!prev) continue; // first time doing it is a baseline, not a PR
+    let bestSet = null;
+    for (const s of e.sets) {
+      const w = Number(s.w) || 0;
+      const reps = Number(s.r) || 0;
+      if (!reps) continue;
+      if (w > 0 && prev.best && e1rm(w, reps) > prev.best.e1rm + 0.01 && (!bestSet || e1rm(w, reps) > e1rm(bestSet.w, bestSet.r))) bestSet = { w, r: reps };
+    }
+    if (bestSet) prs.push({ id: e.id, kind: 'strength', ...bestSet });
+    else if (!e.sets.some((s) => Number(s.w) > 0) && prev.mostReps) {
+      const top = Math.max(...e.sets.map((s) => Number(s.r) || 0));
+      if (top > prev.mostReps.r) prs.push({ id: e.id, kind: 'reps', w: 0, r: top });
+    }
+  }
+  return prs;
+}
+
+/** Monday-based ISO date of the week containing `date`. */
+export function weekStart(date) {
+  const d = new Date(`${date}T12:00:00`);
+  d.setDate(d.getDate() - ((d.getDay() + 6) % 7));
+  return d.toISOString().slice(0, 10);
+}
+
+/** Consecutive calendar weeks (ending this or last week) with at least one workout. */
+export function streakWeeks(logs, today = new Date().toISOString().slice(0, 10)) {
+  const weeks = new Set(logs.map((l) => weekStart(l.date)));
+  let cur = weekStart(today);
+  if (!weeks.has(cur)) { const d = new Date(`${cur}T12:00:00`); d.setDate(d.getDate() - 7); cur = d.toISOString().slice(0, 10); }
+  let n = 0;
+  while (weeks.has(cur)) { n++; const d = new Date(`${cur}T12:00:00`); d.setDate(d.getDate() - 7); cur = d.toISOString().slice(0, 10); }
+  return n;
+}
